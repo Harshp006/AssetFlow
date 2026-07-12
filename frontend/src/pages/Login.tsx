@@ -51,7 +51,7 @@ export const Login: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fff',
+            color: 'var(--text-on-accent)',
             fontWeight: 'bold',
             fontSize: 'var(--font-size-2xl)',
             margin: '0 auto var(--spacing-4)'

@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#fff',
+          color: 'var(--text-on-accent)',
           fontWeight: 'bold',
           fontSize: 'var(--font-size-lg)',
         }}>
@@ -63,7 +63,7 @@ export const Sidebar: React.FC = () => {
               gap: 'var(--spacing-3)',
               padding: 'var(--spacing-3)',
               borderRadius: 'var(--radius-md)',
-              color: isActive ? '#fff' : 'var(--text-secondary)',
+              color: isActive ? 'var(--text-on-accent)' : 'var(--text-secondary)',
               backgroundColor: isActive ? 'var(--bg-surface-hover)' : 'transparent',
               fontWeight: isActive ? 'var(--font-weight-medium)' : 'var(--font-weight-normal)',
               transition: 'all var(--transition-fast)',

@@ -36,7 +36,7 @@ export const RoleSwitcher: React.FC = () => {
                 padding: 'var(--spacing-2)',
                 borderRadius: 'var(--radius-sm)',
                 backgroundColor: user?.role === u.role ? 'var(--accent-primary)' : 'transparent',
-                color: user?.role === u.role ? '#fff' : 'var(--text-primary)',
+                color: user?.role === u.role ? 'var(--text-on-accent)' : 'var(--text-primary)',
                 fontSize: 'var(--font-size-sm)',
                 transition: 'background-color var(--transition-fast)'
               }}

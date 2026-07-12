@@ -13,7 +13,7 @@
 
 .btn-primary {
   background-color: var(--accent-primary);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .btn-primary:hover {
   background-color: var(--accent-primary-hover);
@@ -30,7 +30,7 @@
 
 .btn-danger {
   background-color: var(--accent-danger);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .btn-danger:hover {
   opacity: 0.9;

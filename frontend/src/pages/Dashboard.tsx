@@ -28,14 +28,16 @@ export const Dashboard: React.FC = () => {
 
   const activityColumns: Column<Activity>[] = [
     { key: 'user', header: 'User' },
-    { key: 'action', header: 'Action', render: (item) => (
-      <span style={{ 
-        color: item.action.includes('approved') ? 'var(--accent-secondary)' : 
-               item.action.includes('requested') ? 'var(--accent-warning)' : 'var(--text-primary)'
-      }}>
-        {item.action}
-      </span>
-    )},
+    {
+      key: 'action', header: 'Action', render: (item) => (
+        <span style={{
+          color: item.action.includes('approved') ? 'var(--accent-secondary)' :
+            item.action.includes('requested') ? 'var(--accent-warning)' : 'var(--text-primary)'
+        }}>
+          {item.action}
+        </span>
+      )
+    },
     { key: 'target', header: 'Asset / Target' },
     { key: 'timestamp', header: 'Time', render: (item) => new Date(item.timestamp).toLocaleString() },
   ];
@@ -86,14 +88,14 @@ export const Dashboard: React.FC = () => {
               <AreaChart data={mockChartData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--text-tertiary)" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-tertiary)" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val/1000}k`} />
-                <Tooltip 
+                <YAxis stroke="var(--text-tertiary)" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val / 1000}k`} />
+                <Tooltip
                   contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-strong)', borderRadius: 'var(--radius-md)' }}
                   itemStyle={{ color: 'var(--text-primary)' }}
                 />
@@ -139,10 +141,10 @@ export const Dashboard: React.FC = () => {
 
       <Card title="Assets Requiring Attention" description="These assets have pending maintenance or transfer requests.">
         <div style={{ marginTop: 'var(--spacing-4)' }}>
-          <Table 
-            columns={activityColumns} 
-            data={metrics.recentActivity} 
-            keyExtractor={(item) => item.id} 
+          <Table
+            columns={activityColumns}
+            data={metrics.recentActivity}
+            keyExtractor={(item) => item.id}
           />
         </div>
       </Card>

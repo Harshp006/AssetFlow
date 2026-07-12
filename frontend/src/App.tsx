@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { Settings } from './pages/Settings';
 import { initializeMockData } from './services/mockData';
 
 // Placeholder for unbuilt pages
@@ -20,7 +22,8 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -32,13 +35,14 @@ export const App: React.FC = () => {
             <Route path="/maintenance" element={<PlaceholderPage title="Maintenance" />} />
             <Route path="/bookings" element={<PlaceholderPage title="Bookings" />} />
             <Route path="/reports" element={<PlaceholderPage title="Reports" />} />
-            <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ThemeProvider>
   );
 };
 
