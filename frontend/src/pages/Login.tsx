@@ -6,13 +6,13 @@ import { predefinedUsers } from '../services/mockData';
 import { LogIn } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+  if (isAuthenticated && user) {
+    return <Navigate to={user.role === 'Employee' ? '/employee' : '/'} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

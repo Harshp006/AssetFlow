@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import { initializeEmployeeData } from './mock/employeeData';
 
 export type Role = 'Admin' | 'Department Head' | 'Asset Manager' | 'Employee';
 
@@ -53,4 +54,7 @@ export const initializeMockData = () => {
   if (!storage.get('dashboard_metrics')) {
     storage.set('dashboard_metrics', initialMetrics);
   }
+  // Seed employee-specific data
+  initializeEmployeeData();
 };
+

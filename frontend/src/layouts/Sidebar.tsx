@@ -1,12 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Package, ArrowRightLeft, PenTool, Calendar, FileText, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ArrowRightLeft, PenTool, Calendar, FileText, Settings, LogOut, Plus, Bell, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getUnreadCount } from '../services/mock/employeeData';
 
 export const Sidebar: React.FC = () => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   
-  const navItems = [
+  // Base Admin/Other roles nav items
+  const defaultNavItems: Array<{ name: string, path: string, icon: any, badge?: number }> = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Assets', path: '/assets', icon: Package },
     { name: 'Transfers', path: '/transfers', icon: ArrowRightLeft },
@@ -15,6 +17,21 @@ export const Sidebar: React.FC = () => {
     { name: 'Reports', path: '/reports', icon: FileText },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
+
+  // Employee-specific nav items
+  const employeeNavItems: Array<{ name: string, path: string, icon: any, badge?: number }> = [
+    { name: 'Dashboard', path: '/employee', icon: LayoutDashboard },
+    { name: 'My Assets', path: '/employee/my-assets', icon: Package },
+    { name: 'Request Asset', path: '/employee/request-asset', icon: Plus },
+    { name: 'Resource Booking', path: '/employee/bookings', icon: Calendar },
+    { name: 'Maintenance', path: '/employee/maintenance', icon: PenTool },
+    { name: 'Transfer Requests', path: '/employee/transfers', icon: ArrowRightLeft },
+    { name: 'Return Requests', path: '/employee/returns', icon: ArrowRightLeft }, // Assuming same icon for now, could use a different one
+    { name: 'Notifications', path: '/employee/notifications', icon: Bell, badge: getUnreadCount() },
+    { name: 'Profile', path: '/employee/profile', icon: User },
+  ];
+
+  const navItems = user?.role === 'Employee' ? employeeNavItems : defaultNavItems;
 
   return (
     <aside style={{
@@ -70,7 +87,12 @@ export const Sidebar: React.FC = () => {
             })}
           >
             <item.icon size={20} />
-            {item.name}
+            <span style={{ flex: 1 }}>{item.name}</span>
+            {item.badge !== undefined && item.badge > 0 && (
+              <span style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--text-on-accent)', fontSize: '0.65rem', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontWeight: 'bold' }}>
+                {item.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
