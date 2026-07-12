@@ -1,91 +1,58 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id           Int      @id @default(autoincrement()) @map("user_id")
   name         String
   email        String   @unique
-  passwordHash String
-  role         String
+  passwordHash String   @map("password_hash")
+  role         String   @default("EMPLOYEE")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  employee Employee?
+  assets       Asset[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@map("users")
 }
-
-
-model Department {
-  id          String @id @default(uuid())
-  name        String @unique
-  description String?
-
-  employees Employee[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-
-model Employee {
-  id           String @id @default(uuid())
-
-  employeeCode String @unique
-  firstName    String
-  lastName     String
-
-  email String @unique
-  phone String?
-
-  designation String?
-
-  userId String? @unique
-  user User? @relation(fields: [userId], references: [id])
-
-  departmentId String?
-  department Department? @relation(fields: [departmentId], references: [id])
-
-  assets Asset[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-
-model AssetCategory {
-  id          String @id @default(uuid())
-  name        String @unique
-  description String?
-
-  assets Asset[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 
 model Asset {
-  id String @id @default(uuid())
+  id              Int           @id @default(autoincrement()) @map("asset_id")
+  assetTag        String?       @map("asset_tag")
+  name            String
+  categoryId      Int?          @map("category_id")
+  serialNumber    String        @unique @map("serial_number")
+  acquisitionCost Float         @default(0.0) @map("acquisition_cost")
+  acquisitionDate DateTime?     @map("acquisition_date")
+  status          String        @default("Available") @map("current_status")
+  description     String?
+  location        String?
+  assignedToId    Int?          @map("assigned_to_id")
+  assignedTo      User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  purchaseDate    DateTime?     @map("purchase_date")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  assetCode String @unique
-  name String
+  maintenances    Maintenance[]
 
-  description String?
+  @@map("assets")
+}
 
-  status String @default("AVAILABLE")
+model Maintenance {
+  id          Int       @id @default(autoincrement()) @map("maintenance_id")
+  assetId     Int       @map("asset_id")
+  asset       Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  issue       String    @map("issue_description")
+  status      String    @default("PENDING")
+  priority    String    @default("MEDIUM")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
 
-  categoryId String?
-  category AssetCategory? @relation(fields: [categoryId], references: [id])
-
-  assignedToId String?
-  assignedTo Employee? @relation(fields: [assignedToId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@map("maintenances")
 }

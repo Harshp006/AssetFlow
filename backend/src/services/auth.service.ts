@@ -33,16 +33,7 @@ export interface UserResponse {
   role: string;
 }
 
-// TODO (Teammate 1): Implement the actual database repository layer.
-// We define a repository interface here to allow type checking of the service business logic.
-interface IUserRepository {
-  findByEmail(email: string): Promise<UserEntity | null>;
-  create(user: Omit<UserEntity, 'id'>): Promise<UserEntity>;
-}
-
-// TODO (Teammate 1): Instantiate and export/inject the actual userRepository implementation.
-// This placeholder is kept uninitialized here to avoid mock database storage or fake CRUD code.
-let userRepository: IUserRepository;
+import { userRepository } from '../repositories/user.repository';
 
 /**
  * Registers a new user in the system after validating email uniqueness and hashing the password.
