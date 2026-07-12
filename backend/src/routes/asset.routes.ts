@@ -11,7 +11,8 @@ import {
 import validationMiddleware from "../middlewares/validation.middleware";
 
 import {
-    createAssetValidator
+    createAssetValidator,
+    updateAssetValidator
 } from "../validators/asset.validator";
 
 const router = Router();
@@ -27,7 +28,12 @@ router.post(
     createAsset
 );
 
-router.put("/:id", createAsset);
+router.put(
+    "/:id",
+    updateAssetValidator,
+    validationMiddleware,
+    updateAsset
+);
 
 router.delete("/:id", deleteAsset);
 

@@ -13,6 +13,15 @@ const mapToAssetType = (dbAsset: any): any => {
   };
 };
 
+export const getAssetBySerialNumberRepository = async (serialNumber: string) => {
+  const dbAsset = await prisma.asset.findUnique({
+    where: { serialNumber },
+  });
+
+  if (!dbAsset) return null;
+  return mapToAssetType(dbAsset);
+};
+
 export const getAssetsRepository = async () => {
   const dbAssets = await prisma.asset.findMany({
     orderBy: { id: "asc" },

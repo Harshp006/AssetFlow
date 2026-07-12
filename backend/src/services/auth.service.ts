@@ -42,7 +42,7 @@ import { userRepository } from '../repositories/user.repository';
  * @returns The created user details (excluding password).
  * @throws Error if the user email is already registered, fields are invalid, or password is missing.
  */
-export const registerUser = async (registerData: RegisterInput): Promise<UserResponse> => {
+export const registerUser = async (registerData: RegisterInput): Promise<{ token: string; user: UserResponse }> => {
   const { name, email, password, role } = registerData;
 
   // Business Logic: Input Validation
@@ -50,7 +50,6 @@ export const registerUser = async (registerData: RegisterInput): Promise<UserRes
     throw new Error('All fields (name, email, password, role) are required.');
   }
 
-  // TODO: userRepository.findByEmail(email)
   // Check whether a user with the same email already exists in the database.
   const existingUser = await userRepository.findByEmail(email);
   if (existingUser) {
@@ -60,7 +59,6 @@ export const registerUser = async (registerData: RegisterInput): Promise<UserRes
   // Business Logic: Hash the password using bcrypt with 10 salt rounds.
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // TODO: userRepository.create(user)
   // Create and save the new user entity in the database.
   const newUser = await userRepository.create({
     name,
@@ -69,12 +67,21 @@ export const registerUser = async (registerData: RegisterInput): Promise<UserRes
     role,
   });
 
-  // Return ONLY the created user details, omitting the password field.
-  return {
-    id: newUser.id,
-    name: newUser.name,
-    email: newUser.email,
+  // Business Logic: Generate a JWT for the registered user.
+  const token = generateToken({
+    userId: newUser.id,
     role: newUser.role,
+  });
+
+  // Return token and user details (excluding the password).
+  return {
+    token,
+    user: {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+    },
   };
 };
 
