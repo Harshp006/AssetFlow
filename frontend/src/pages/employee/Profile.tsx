@@ -1,156 +1,82 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { getProfile, updateProfile, getMyAssets, getBookings, getMaintenanceRequests } from '../../services/mock/employeeData';
-import type { EmployeeProfile } from '../../types/models';
-import { User, Mail, Phone, Building, Hash, Calendar, Camera } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
-export const Profile: React.FC = () => {
-  const [profile, setProfile] = useState<EmployeeProfile | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+export const EmployeeProfile: React.FC = () => {
+  const { logout } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const cardBg = isDark ? '#1e293b' : '#ffffff';
+  const border = isDark ? '#334155' : '#e2e8f0';
+  const textPrimary = isDark ? '#f8fafc' : '#0f172a';
+  const textMuted = isDark ? '#64748b' : '#94a3b8';
 
-  const [stats, setStats] = useState({ assets: 0, bookings: 0, maintenance: 0 });
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const p = getProfile();
-    setProfile(p);
-    setPhone(p.phone);
-    setStats({
-      assets: getMyAssets().length,
-      bookings: getBookings().length,
-      maintenance: getMaintenanceRequests().length
-    });
+    api.get('/employee/profile')
+      .then(res => setProfile(res.data.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile({ phone });
-    setProfile(getProfile());
-    setIsEditing(false);
-    setPassword('');
-    setNewPassword('');
-  };
-
-  if (!profile) return null;
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-6)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)' }}>My Profile</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Manage your personal information and account settings.</p>
-        </div>
-      </header>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--spacing-6)' }}>
-        
-        {/* Left Column: Avatar and Stats */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
-          <Card>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--spacing-4) 0' }}>
-              <div style={{ position: 'relative', marginBottom: 'var(--spacing-4)' }}>
-                <div style={{
-                  width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--accent-primary)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '3rem', color: 'var(--text-on-accent)', fontWeight: 'bold'
-                }}>
-                  {profile.name.charAt(0)}
-                </div>
-                {isEditing && (
-                  <button style={{
-                    position: 'absolute', bottom: 0, right: 0, backgroundColor: 'var(--bg-surface-elevated)',
-                    border: '1px solid var(--border-strong)', borderRadius: '50%', padding: 'var(--spacing-2)',
-                    color: 'var(--text-primary)', cursor: 'pointer'
-                  }}>
-                    <Camera size={16} />
-                  </button>
-                )}
-              </div>
-              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)' }}>{profile.name}</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>{profile.role}</p>
-            </div>
-            <div style={{ borderTop: '1px solid var(--border-subtle)', margin: 'var(--spacing-4) -var(--spacing-6) 0', padding: 'var(--spacing-4) var(--spacing-6) 0' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', gap: 'var(--spacing-2)' }}>
-                <div>
-                  <p style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)' }}>{stats.assets}</p>
-                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>Assets</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)' }}>{stats.bookings}</p>
-                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>Bookings</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)' }}>{stats.maintenance}</p>
-                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>Issues</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column: Details Form */}
-        <Card title="Personal Information" headerAction={
-          !isEditing && <Button variant="secondary" onClick={() => setIsEditing(true)}>Edit Profile</Button>
-        }>
-          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-6)', marginTop: 'var(--spacing-4)' }}>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-4)' }}>
-              <div className="input-group">
-                <label className="input-label"><User size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Full Name</label>
-                <input className="input-field" value={profile.name} disabled />
-              </div>
-              <div className="input-group">
-                <label className="input-label"><Hash size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Employee ID</label>
-                <input className="input-field" value={profile.employeeId} disabled />
-              </div>
-              <div className="input-group">
-                <label className="input-label"><Mail size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Email Address</label>
-                <input className="input-field" value={profile.email} disabled />
-              </div>
-              <div className="input-group">
-                <label className="input-label"><Phone size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Phone Number</label>
-                <input className="input-field" value={phone} onChange={e => setPhone(e.target.value)} disabled={!isEditing} />
-              </div>
-              <div className="input-group">
-                <label className="input-label"><Building size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Department</label>
-                <input className="input-field" value={profile.department} disabled />
-              </div>
-              <div className="input-group">
-                <label className="input-label"><Calendar size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Joined Date</label>
-                <input className="input-field" value={profile.joinedDate} disabled />
-              </div>
-            </div>
-
-            {isEditing && (
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--spacing-4)' }}>
-                <h4 style={{ fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--spacing-4)' }}>Change Password</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-4)' }}>
-                  <div className="input-group">
-                    <label className="input-label">Current Password</label>
-                    <input className="input-field" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label">New Password</label>
-                    <input className="input-field" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {isEditing && (
-              <div style={{ display: 'flex', gap: 'var(--spacing-3)', justifyContent: 'flex-end', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--spacing-4)' }}>
-                <Button variant="secondary" type="button" onClick={() => { setIsEditing(false); setPhone(profile.phone); }}>Cancel</Button>
-                <Button type="submit">Save Changes</Button>
-              </div>
-            )}
-          </form>
-        </Card>
-
+    <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: textPrimary, marginBottom: '0.25rem' }}>My Profile</h1>
+        <p style={{ color: textMuted, fontSize: '0.875rem' }}>Your personal employee account information</p>
       </div>
+
+      {loading ? (
+        <div style={{ maxWidth: '600px', height: '300px', borderRadius: '12px', background: cardBg, border: `1px solid ${border}`, animation: 'pulse 1.5s ease-in-out infinite' }} />
+      ) : (
+        <div style={{ display: 'grid', gap: '1rem', maxWidth: '600px' }}>
+          {/* Card */}
+          <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '12px', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', borderBottom: `1px solid ${border}`, paddingBottom: '1.25rem' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.5rem', fontWeight: 700 }}>
+                {profile?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: textPrimary }}>{profile?.name}</h3>
+                <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '20px', background: '#10b98120', color: '#10b981', fontWeight: 600 }}>Employee</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[
+                { label: 'Email Address', value: profile?.email },
+                { label: 'Employee Code', value: profile?.employeeCode, mono: true },
+                { label: 'Company Name', value: profile?.company?.name },
+                { label: 'Company Code', value: profile?.company?.companyCode, mono: true },
+                { label: 'Total Assigned Assets', value: profile?._count?.assets ?? 0 },
+                { label: 'Total Requests Raised', value: profile?._count?.requestedRequests ?? 0 },
+              ].map(({ label, value, mono }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.625rem 0', borderBottom: `1px solid ${border}` }}>
+                  <span style={{ fontSize: '0.875rem', color: textMuted }}>{label}</span>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 500, fontFamily: mono ? 'monospace' : 'inherit', color: mono ? '#3b82f6' : textPrimary }}>{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action */}
+          <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ color: textPrimary, fontWeight: 500, fontSize: '0.875rem' }}>Logout</p>
+              <p style={{ color: textMuted, fontSize: '0.8rem' }}>Sign out of this device</p>
+            </div>
+            <button onClick={logout} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
     </div>
   );
 };

@@ -1,35 +1,63 @@
 import { Request, Response } from 'express';
-import { registerUser, loginUser } from '../services/auth.service';
 import asyncHandler from '../utils/asyncHandler';
 import { successResponse } from '../utils/response';
+import {
+  registerAdmin,
+  loginUser,
+  createEmployee,
+  updateUserRole,
+  toggleUserActive,
+  getCompanyEmployees,
+} from '../services/auth.service';
 
-/**
- * Controller to handle user registration.
- * 
- * - Extracts name, email, password, and role from the request body.
- * - Invokes the authentication service to register the user.
- * - On success, returns HTTP 201 with the created user object and JWT token.
- */
-export const register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password, role } = req.body;
-
-  const result = await registerUser({ name, email, password, role });
-
-  successResponse(res, 'User registered successfully.', result, 201);
+/** POST /api/auth/register/admin — Creates a company + admin user */
+export const registerAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { companyName, name, email, password } = req.body;
+  const result = await registerAdmin({ companyName, name, email, password });
+  successResponse(res, 'Company and admin account created successfully.', result, 201);
 });
 
-/**
- * Controller to handle user login.
- * 
- * - Extracts email and password from the request body.
- * - Invokes the authentication service to verify credentials and generate token.
- * - On success, returns HTTP 200 with the JWT token and the authenticated user details.
- */
-export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
-
-  const result = await loginUser({ email, password });
-
+/** POST /api/auth/login — Company Code + Employee Code + Password */
+export const loginHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { companyCode, employeeCode, password } = req.body;
+  const result = await loginUser({ companyCode, employeeCode, password });
   successResponse(res, 'Login successful.', result, 200);
 });
 
+/** GET /api/auth/me — Return current user from JWT */
+export const getMeHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const user = (req as any).user;
+  successResponse(res, 'User retrieved.', user, 200);
+});
+
+/** POST /api/auth/employees — Admin creates an employee */
+export const createEmployeeHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { name, email, password, role } = req.body;
+  const companyId = parseInt((req as any).user.companyId, 10);
+  const result = await createEmployee({ name, email, password, role: role || 'EMPLOYEE', companyId });
+  successResponse(res, 'Employee created successfully.', result, 201);
+});
+
+/** GET /api/auth/employees — List all employees in company */
+export const listEmployeesHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const companyId = parseInt((req as any).user.companyId, 10);
+  const employees = await getCompanyEmployees(companyId);
+  successResponse(res, 'Employees retrieved.', employees, 200);
+});
+
+/** PATCH /api/auth/employees/:id/role — Admin updates employee role */
+export const updateRoleHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userId = parseInt(req.params.id as string);
+  const { role } = req.body;
+  const companyId = parseInt((req as any).user.companyId, 10);
+  const result = await updateUserRole(userId, role, companyId);
+  successResponse(res, 'Role updated successfully.', result, 200);
+});
+
+/** PATCH /api/auth/employees/:id/toggle-active — Admin activates/deactivates */
+export const toggleActiveHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userId = parseInt(req.params.id as string);
+  const companyId = parseInt((req as any).user.companyId, 10);
+  const result = await toggleUserActive(userId, companyId);
+  successResponse(res, 'User status updated.', result, 200);
+});

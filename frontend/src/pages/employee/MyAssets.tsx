@@ -1,218 +1,143 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { api } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
-import { StatusBadge } from '../../components/employee/StatusBadge';
-import { Button } from '../../components/ui/Button';
-import { getMyAssets, createMaintenanceRequest, createTransferRequest, createReturnRequest } from '../../services/mock/employeeData';
-import type { Asset, MaintenancePriority } from '../../types/models';
-import { Wrench, ArrowRightLeft, Undo2, History, X, Search } from 'lucide-react';
+export const EmployeeMyAssets: React.FC = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  const cardBg = isDark ? '#1e293b' : '#ffffff';
+  const border = isDark ? '#334155' : '#e2e8f0';
+  const textPrimary = isDark ? '#f8fafc' : '#0f172a';
+  const textMuted = isDark ? '#64748b' : '#94a3b8';
+  const inputBg = isDark ? '#0f172a' : '#f8fafc';
 
-type ModalType = 'maintenance' | 'transfer' | 'return' | 'history' | null;
+  const [assets, setAssets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showMaintModal, setShowMaintModal] = useState<any>(null);
+  const [maintForm, setMaintForm] = useState({ issue: '', priority: 'MEDIUM' });
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-export const MyAssets: React.FC = () => {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [search, setSearch] = useState('');
-  const [modalType, setModalType] = useState<ModalType>(null);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-
-  // Maintenance form
-  const [mntPriority, setMntPriority] = useState<MaintenancePriority>('Medium');
-  const [mntDesc, setMntDesc] = useState('');
-  // Transfer form
-  const [tfTo, setTfTo] = useState('');
-  const [tfType, setTfType] = useState<'Employee' | 'Department'>('Employee');
-  const [tfReason, setTfReason] = useState('');
-  // Return form
-  const [retNotes, setRetNotes] = useState('');
-
-  const reload = () => setAssets(getMyAssets());
-  useEffect(() => { reload(); }, []);
-
-  const filtered = assets.filter(a =>
-    a.name.toLowerCase().includes(search.toLowerCase()) ||
-    a.tag.toLowerCase().includes(search.toLowerCase()) ||
-    a.category.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const openModal = (type: ModalType, asset: Asset) => { setSelectedAsset(asset); setModalType(type); setMntDesc(''); setMntPriority('Medium'); setTfTo(''); setTfReason(''); setRetNotes(''); };
-  const closeModal = () => { setModalType(null); setSelectedAsset(null); };
-
-  const handleMaintenance = () => {
-    if (!selectedAsset || !mntDesc.trim()) return;
-    createMaintenanceRequest({ assetId: selectedAsset.id, assetName: selectedAsset.name, priority: mntPriority, description: mntDesc });
-    closeModal(); reload();
+  const load = () => {
+    setLoading(true);
+    api.get('/employee/my-assets')
+      .then(res => setAssets(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
-  const handleTransfer = () => {
-    if (!selectedAsset || !tfTo.trim() || !tfReason.trim()) return;
-    createTransferRequest({ assetId: selectedAsset.id, assetName: selectedAsset.name, transferTo: tfTo, transferType: tfType, reason: tfReason });
-    closeModal(); reload();
+
+  useEffect(() => { load(); }, []);
+
+  const handleMaintenance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/asset-manager/maintenance', {
+        assetId: showMaintModal.id,
+        issue: maintForm.issue,
+        priority: maintForm.priority
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        setShowMaintModal(null);
+        setMaintForm({ issue: '', priority: 'MEDIUM' });
+        setSuccess(false);
+        load();
+      }, 2000);
+    } catch {
+      alert('Failed to submit maintenance request.');
+    } finally {
+      setSubmitting(false);
+    }
   };
-  const handleReturn = () => {
-    if (!selectedAsset) return;
-    createReturnRequest({ assetId: selectedAsset.id, assetName: selectedAsset.name, notes: retNotes });
-    closeModal(); reload();
+
+  const statusColors: Record<string, string> = {
+    Available: '#10b981',
+    Allocated: '#3b82f6',
+    'Under Maintenance': '#f59e0b',
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-6)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)' }}>My Assets</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>{assets.length} assets currently assigned to you.</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-md)', padding: 'var(--spacing-2) var(--spacing-3)', width: '280px' }}>
-          <Search size={16} color="var(--text-tertiary)" style={{ marginRight: 'var(--spacing-2)' }} />
-          <input type="text" placeholder="Search assets..." value={search} onChange={e => setSearch(e.target.value)} style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: 'var(--font-size-sm)' }} />
-        </div>
-      </header>
-
-      {/* Asset Table */}
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Asset</th>
-              <th>Tag</th>
-              <th>Category</th>
-              <th>Serial No.</th>
-              <th>Status</th>
-              <th>Condition</th>
-              <th>Location</th>
-              <th>Allocated</th>
-              <th>Return By</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(asset => (
-              <tr key={asset.id}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-                    <span style={{ fontSize: '1.25rem' }}>{asset.image}</span>
-                    <span style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--text-primary)' }}>{asset.name}</span>
-                  </div>
-                </td>
-                <td><code style={{ fontSize: 'var(--font-size-xs)', backgroundColor: 'var(--bg-surface-hover)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>{asset.tag}</code></td>
-                <td>{asset.category}</td>
-                <td style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{asset.serialNumber}</td>
-                <td><StatusBadge status={asset.status} /></td>
-                <td><StatusBadge status={asset.condition} /></td>
-                <td>{asset.location}</td>
-                <td style={{ fontSize: 'var(--font-size-xs)' }}>{asset.allocationDate}</td>
-                <td style={{ fontSize: 'var(--font-size-xs)' }}>{asset.expectedReturnDate}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-1)' }}>
-                    <button title="Raise Maintenance" onClick={() => openModal('maintenance', asset)} style={{ padding: '4px', borderRadius: 'var(--radius-sm)', color: 'var(--accent-warning)' }}><Wrench size={15} /></button>
-                    <button title="Transfer" onClick={() => openModal('transfer', asset)} style={{ padding: '4px', borderRadius: 'var(--radius-sm)', color: 'var(--accent-primary)' }}><ArrowRightLeft size={15} /></button>
-                    <button title="Return" onClick={() => openModal('return', asset)} style={{ padding: '4px', borderRadius: 'var(--radius-sm)', color: 'var(--accent-danger)' }}><Undo2 size={15} /></button>
-                    <button title="History" onClick={() => openModal('history', asset)} style={{ padding: '4px', borderRadius: 'var(--radius-sm)', color: 'var(--text-tertiary)' }}><History size={15} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={10} style={{ textAlign: 'center', padding: 'var(--spacing-8)', color: 'var(--text-tertiary)' }}>No assets found.</td></tr>
-            )}
-          </tbody>
-        </table>
+    <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: textPrimary, marginBottom: '0.25rem' }}>My Assigned Assets</h1>
+        <p style={{ color: textMuted, fontSize: '0.875rem' }}>Assets currently registered to you</p>
       </div>
 
-      {/* Modal Backdrop */}
-      {modalType && (
-        <div onClick={closeModal} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 'var(--spacing-6)', width: '480px', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-4)' }}>
-              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)' }}>
-                {modalType === 'maintenance' && 'Raise Maintenance'}
-                {modalType === 'transfer' && 'Transfer Asset'}
-                {modalType === 'return' && 'Return Asset'}
-                {modalType === 'history' && 'Asset History'}
-              </h3>
-              <button onClick={closeModal} style={{ color: 'var(--text-tertiary)' }}><X size={20} /></button>
+      {/* Assets List */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+        {loading ? (
+          [1, 2].map(i => <div key={i} style={{ height: '140px', borderRadius: '12px', background: cardBg, border: `1px solid ${border}`, animation: 'pulse 1.5s ease-in-out infinite' }} />)
+        ) : assets.length === 0 ? (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', background: cardBg, border: `1px solid ${border}`, borderRadius: '12px' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📦</div>
+            <h3 style={{ color: textPrimary, fontWeight: 600 }}>No Assigned Assets</h3>
+            <p style={{ color: textMuted, fontSize: '0.875rem', marginTop: '0.25rem' }}>If you need an asset, please submit a request.</p>
+          </div>
+        ) : (
+          assets.map(a => (
+            <div key={a.id} style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: '12px', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <span style={{ fontWeight: 600, color: textPrimary, fontSize: '1rem' }}>{a.name}</span>
+                  <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '20px', background: `${statusColors[a.status] || '#6b7280'}20`, color: statusColors[a.status] || '#6b7280', fontWeight: 500 }}>{a.status}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8rem', color: textMuted, marginBottom: '1rem' }}>
+                  <div>Asset Tag: <span style={{ fontFamily: 'monospace', color: textPrimary }}>{a.assetTag || '—'}</span></div>
+                  <div>Serial No: <span style={{ fontFamily: 'monospace', color: textPrimary }}>{a.serialNumber}</span></div>
+                  <div>Category: <span style={{ color: textPrimary }}>{a.category}</span></div>
+                  <div>Location: <span style={{ color: textPrimary }}>{a.location || '—'}</span></div>
+                </div>
+              </div>
+              {a.status !== 'Under Maintenance' && (
+                <button onClick={() => setShowMaintModal(a)} style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #f59e0b', background: 'transparent', color: '#f59e0b', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 150ms' }}>
+                  🔧 Report Issue / Maintenance
+                </button>
+              )}
             </div>
+          ))
+        )}
+      </div>
 
-            {selectedAsset && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', padding: 'var(--spacing-3)', backgroundColor: 'var(--bg-surface-hover)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--spacing-4)' }}>
-                <span style={{ fontSize: '1.5rem' }}>{selectedAsset.image}</span>
+      {/* Maintenance Request Modal */}
+      {showMaintModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: cardBg, borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '440px', border: `1px solid ${border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: textPrimary }}>Report Issue</h2>
+              <button onClick={() => setShowMaintModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: textMuted }}>✕</button>
+            </div>
+            {success ? (
+              <div style={{ padding: '1.5rem', borderRadius: '10px', background: '#10b98120', border: '1px solid #10b98140', color: '#10b981', textAlign: 'center', fontWeight: 500 }}>
+                ✅ Maintenance request submitted successfully!
+              </div>
+            ) : (
+              <form onSubmit={handleMaintenance} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ color: textMuted, fontSize: '0.875rem' }}>Reporting issue for: <strong style={{ color: textPrimary }}>{showMaintModal.name}</strong></p>
                 <div>
-                  <p style={{ fontWeight: 'var(--font-weight-medium)' }}>{selectedAsset.name}</p>
-                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>{selectedAsset.tag} · {selectedAsset.serialNumber}</p>
+                  <label style={{ fontSize: '0.8rem', color: textMuted, display: 'block', marginBottom: '0.375rem', fontWeight: 500 }}>Describe the issue</label>
+                  <textarea value={maintForm.issue} onChange={e => setMaintForm(f => ({ ...f, issue: e.target.value }))} required rows={3} placeholder="Please describe what is wrong with the asset..." style={{ width: '100%', padding: '0.625rem', borderRadius: '8px', border: `1px solid ${border}`, background: inputBg, color: textPrimary, fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }} />
                 </div>
-              </div>
-            )}
-
-            {/* Maintenance Form */}
-            {modalType === 'maintenance' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
-                <div className="input-group">
-                  <label className="input-label">Priority</label>
-                  <select className="input-field" value={mntPriority} onChange={e => setMntPriority(e.target.value as MaintenancePriority)}>
-                    <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: textMuted, display: 'block', marginBottom: '0.375rem', fontWeight: 500 }}>Priority</label>
+                  <select value={maintForm.priority} onChange={e => setMaintForm(f => ({ ...f, priority: e.target.value }))} style={{ width: '100%', padding: '0.625rem', borderRadius: '8px', border: `1px solid ${border}`, background: inputBg, color: textPrimary, fontSize: '0.875rem' }}>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
                   </select>
                 </div>
-                <div className="input-group">
-                  <label className="input-label">Issue Description *</label>
-                  <textarea className="input-field" rows={4} placeholder="Describe the issue..." value={mntDesc} onChange={e => setMntDesc(e.target.value)} />
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => setShowMaintModal(null)} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: `1px solid ${border}`, background: 'transparent', color: textPrimary, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={submitting} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>{submitting ? 'Submitting...' : 'Submit Request'}</button>
                 </div>
-                <Button onClick={handleMaintenance} disabled={!mntDesc.trim()}>Submit Request</Button>
-              </div>
-            )}
-
-            {/* Transfer Form */}
-            {modalType === 'transfer' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
-                <div className="input-group">
-                  <label className="input-label">Transfer Type</label>
-                  <select className="input-field" value={tfType} onChange={e => setTfType(e.target.value as 'Employee' | 'Department')}>
-                    <option value="Employee">Employee</option><option value="Department">Department</option>
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Transfer To *</label>
-                  <input className="input-field" placeholder={tfType === 'Employee' ? 'Employee name...' : 'Department name...'} value={tfTo} onChange={e => setTfTo(e.target.value)} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Reason *</label>
-                  <textarea className="input-field" rows={3} placeholder="Reason for transfer..." value={tfReason} onChange={e => setTfReason(e.target.value)} />
-                </div>
-                <Button onClick={handleTransfer} disabled={!tfTo.trim() || !tfReason.trim()}>Submit Transfer</Button>
-              </div>
-            )}
-
-            {/* Return Confirm */}
-            {modalType === 'return' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>Are you sure you want to initiate a return for this asset?</p>
-                <div className="input-group">
-                  <label className="input-label">Return Notes (optional)</label>
-                  <textarea className="input-field" rows={3} placeholder="Any notes about the condition..." value={retNotes} onChange={e => setRetNotes(e.target.value)} />
-                </div>
-                <Button variant="danger" onClick={handleReturn}>Confirm Return</Button>
-              </div>
-            )}
-
-            {/* History */}
-            {modalType === 'history' && selectedAsset && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Allocated On</span><span>{selectedAsset.allocationDate}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Expected Return</span><span>{selectedAsset.expectedReturnDate}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Current Condition</span><StatusBadge status={selectedAsset.condition} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Current Status</span><StatusBadge status={selectedAsset.status} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Value</span><span>${selectedAsset.value.toLocaleString()}</span>
-                </div>
-              </div>
+              </form>
             )}
           </div>
         </div>
       )}
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
     </div>
   );
 };

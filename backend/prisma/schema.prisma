@@ -8,51 +8,123 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Company (Tenant) ─────────────────────────────────────────────────────────
+model Company {
+  id          Int      @id @default(autoincrement()) @map("company_id")
+  name        String
+  companyCode String   @unique @map("company_code") // e.g. "ASF-4829"
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users    User[]
+  assets   Asset[]
+
+  @@map("companies")
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
 model User {
-  id           Int      @id @default(autoincrement()) @map("user_id")
+  id           Int     @id @default(autoincrement()) @map("user_id")
+  companyId    Int     @map("company_id")
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         String   @default("EMPLOYEE")
+  email        String
+  employeeCode String  @map("employee_code") // e.g. "ADM-0001", "EMP-0023"
+  passwordHash String  @map("password_hash")
+  // Roles: ADMIN | ASSET_MANAGER | DEPARTMENT_HEAD | EMPLOYEE
+  role         String  @default("EMPLOYEE")
+  isActive     Boolean @default(true) @map("is_active")
+
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  assets       Asset[]
+  assets            Asset[]
+  requestedRequests AssetRequest[]  @relation("RequestedByUser")
+  resolvedRequests  AssetRequest[]  @relation("ResolvedByUser")
+  notifications     Notification[]
 
+  // Composite unique: employeeCode unique within a company
+  @@unique([companyId, employeeCode])
+  // Email unique within a company
+  @@unique([companyId, email])
   @@map("users")
 }
 
+// ─── Asset ────────────────────────────────────────────────────────────────────
 model Asset {
-  id              Int           @id @default(autoincrement()) @map("asset_id")
-  assetTag        String?       @map("asset_tag")
+  id              Int       @id @default(autoincrement()) @map("asset_id")
+  companyId       Int       @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  assetTag        String?   @map("asset_tag")
   name            String
-  categoryId      Int?          @map("category_id")
-  serialNumber    String        @unique @map("serial_number")
-  acquisitionCost Float         @default(0.0) @map("acquisition_cost")
-  acquisitionDate DateTime?     @map("acquisition_date")
-  status          String        @default("Available") @map("current_status")
+  category        String    @default("General")
+  serialNumber    String    @map("serial_number")
+  acquisitionCost Float     @default(0.0) @map("acquisition_cost")
+  acquisitionDate DateTime? @map("acquisition_date")
+  status          String    @default("Available") @map("current_status")
   description     String?
-  location        String?
-  assignedToId    Int?          @map("assigned_to_id")
-  assignedTo      User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
-  purchaseDate    DateTime?     @map("purchase_date")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  location        String?   @default("HQ Office")
+  assignedToId    Int?      @map("assigned_to_id")
+  assignedTo      User?     @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  purchaseDate    DateTime? @map("purchase_date")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   maintenances    Maintenance[]
+  requests        AssetRequest[]
 
+  @@unique([companyId, serialNumber])
   @@map("assets")
 }
 
+// ─── Maintenance ──────────────────────────────────────────────────────────────
 model Maintenance {
   id          Int       @id @default(autoincrement()) @map("maintenance_id")
   assetId     Int       @map("asset_id")
   asset       Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
   issue       String    @map("issue_description")
-  status      String    @default("PENDING")
-  priority    String    @default("MEDIUM")
+  status      String    @default("PENDING")   // PENDING | IN_PROGRESS | COMPLETED | CANCELLED
+  priority    String    @default("MEDIUM")    // LOW | MEDIUM | HIGH
+  technicianNote String? @map("technician_note")
   createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
   @@map("maintenances")
+}
+
+// ─── Asset Request ────────────────────────────────────────────────────────────
+model AssetRequest {
+  id            Int      @id @default(autoincrement()) @map("request_id")
+  assetId       Int?     @map("asset_id")
+  asset         Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  requestedById Int      @map("requested_by_id")
+  requestedBy   User     @relation("RequestedByUser", fields: [requestedById], references: [id], onDelete: Cascade)
+  reason        String
+  assetType     String?  @map("asset_type") // What type of asset they want
+  status        String   @default("Pending") // Pending | Approved | Rejected
+  priority      String   @default("Medium")  // Low | Medium | High
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  resolvedById  Int?     @map("resolved_by_id")
+  resolvedBy    User?    @relation("ResolvedByUser", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedNote  String?  @map("resolved_note")
+
+  @@map("asset_requests")
+}
+
+// ─── Notification ─────────────────────────────────────────────────────────────
+model Notification {
+  id        Int      @id @default(autoincrement()) @map("notification_id")
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  priority  String   @default("medium") // low | medium | high
+  type      String   @default("info")   // info | warning | success | error
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
 }

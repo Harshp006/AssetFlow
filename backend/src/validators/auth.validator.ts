@@ -25,8 +25,8 @@ export const registerValidator = [
     .trim()
     .notEmpty()
     .withMessage("Role is required")
-    .isIn(["ADMIN", "EMPLOYEE"])
-    .withMessage("Role must be either ADMIN or EMPLOYEE"),
+    .isIn(["ADMIN", "EMPLOYEE", "DEPARTMENT_HEAD", "ASSET_MANAGER"])
+    .withMessage("Role must be ADMIN, EMPLOYEE, DEPARTMENT_HEAD, or ASSET_MANAGER"),
 ];
 
 export const loginValidator = [

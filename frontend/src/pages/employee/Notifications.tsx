@@ -1,75 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { getNotifications, markRead, markAllRead } from '../../services/mock/employeeData';
-import type { AppNotification } from '../../types/models';
-import { CheckCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { api } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
-export const Notifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [filter, setFilter] = useState<'All' | 'Unread'>('All');
-  const navigate = useNavigate();
+export const EmployeeNotifications: React.FC = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  const cardBg = isDark ? '#1e293b' : '#ffffff';
+  const border = isDark ? '#334155' : '#e2e8f0';
+  const textPrimary = isDark ? '#f8fafc' : '#0f172a';
+  const textMuted = isDark ? '#64748b' : '#94a3b8';
 
-  const reload = () => setNotifications(getNotifications());
-  useEffect(() => { reload(); }, []);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleMarkRead = (id: string) => { markRead(id); reload(); };
-  const handleMarkAllRead = () => { markAllRead(); reload(); };
+  const load = () => {
+    setLoading(true);
+    api.get('/employee/notifications')
+      .then(res => setNotifications(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
-  const filtered = filter === 'All' ? notifications : notifications.filter(n => !n.read);
+  useEffect(() => { load(); }, []);
+
+  const markRead = async (id: number) => {
+    try {
+      await api.patch(`/employee/notifications/${id}/read`);
+      setNotifications(ns => ns.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch {
+      alert('Failed to mark notification as read.');
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-6)' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)' }}>Notifications</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Stay updated on your requests, bookings, and asset statuses.</p>
-        </div>
-        <Button variant="secondary" onClick={handleMarkAllRead}>
-          <CheckCheck size={16} /> Mark All Read
-        </Button>
-      </header>
-
-      <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
-        <button onClick={() => setFilter('All')} className={`btn ${filter === 'All' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 'var(--font-size-xs)' }}>All</button>
-        <button onClick={() => setFilter('Unread')} className={`btn ${filter === 'Unread' ? 'btn-primary' : 'btn-secondary'}`} style={{ fontSize: 'var(--font-size-xs)' }}>
-          Unread {notifications.filter(n => !n.read).length > 0 && `(${notifications.filter(n => !n.read).length})`}
-        </button>
+    <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: textPrimary, marginBottom: '0.25rem' }}>Notifications</h1>
+        <p style={{ color: textMuted, fontSize: '0.875rem' }}>{notifications.filter(n => !n.isRead).length} unread notifications</p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
-        {filtered.length === 0 && (
-          <Card><p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 'var(--spacing-8)' }}>No notifications to display.</p></Card>
-        )}
-        {filtered.map(n => (
-          <Card key={n.id}>
-            <div style={{ display: 'flex', gap: 'var(--spacing-4)', alignItems: 'flex-start' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: n.read ? 'transparent' : 'var(--accent-primary)', flexShrink: 0, marginTop: '8px' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-1)' }}>
-                  <h4 style={{ fontWeight: 'var(--font-weight-medium)', color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{n.title}</h4>
-                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)' }}>{new Date(n.createdAt).toLocaleString()}</span>
-                </div>
-                <p style={{ fontSize: 'var(--font-size-sm)', color: n.read ? 'var(--text-tertiary)' : 'var(--text-secondary)' }}>{n.message}</p>
-                
-                <div style={{ display: 'flex', gap: 'var(--spacing-4)', marginTop: 'var(--spacing-3)' }}>
-                  {n.link && (
-                    <button onClick={() => { handleMarkRead(n.id); navigate(n.link!); }} style={{ color: 'var(--accent-primary)', fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-medium)' }}>
-                      View Details
-                    </button>
-                  )}
-                  {!n.read && (
-                    <button onClick={() => handleMarkRead(n.id)} style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-medium)' }}>
-                      Mark as Read
-                    </button>
-                  )}
+      {/* Notifications List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {loading ? (
+          [1, 2].map(i => <div key={i} style={{ height: '70px', borderRadius: '12px', background: cardBg, border: `1px solid ${border}`, animation: 'pulse 1.5s ease-in-out infinite' }} />)
+        ) : notifications.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3rem', background: cardBg, border: `1px solid ${border}`, borderRadius: '12px', color: textMuted }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🔔</div>
+            <p style={{ fontWeight: 500, color: textPrimary }}>All caught up!</p>
+            <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>No notifications to display.</p>
+          </div>
+        ) : (
+          notifications.map(n => (
+            <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', borderRadius: '12px', background: cardBg, border: `1px solid ${border}`, opacity: n.isRead ? 0.7 : 1 }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: n.isRead ? 'transparent' : '#ef4444', marginTop: '5px', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: textPrimary }}>{n.title}</div>
+                  <div style={{ fontSize: '0.8rem', color: textMuted, marginTop: '0.2' }}>{n.message}</div>
+                  <div style={{ fontSize: '0.75rem', color: textMuted, marginTop: '0.25rem' }}>{new Date(n.createdAt).toLocaleString()}</div>
                 </div>
               </div>
+              {!n.isRead && (
+                <button onClick={() => markRead(n.id)} style={{ padding: '0.375rem 0.75rem', borderRadius: '6px', border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer' }}>
+                  Mark Read
+                </button>
+              )}
             </div>
-          </Card>
-        ))}
+          ))
+        )}
       </div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
     </div>
   );
 };

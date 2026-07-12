@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
-import assetRoutes from "./routes/asset.routes";
-import maintenanceRoutes from "./routes/maintenance.routes";
+import assetManagerRoutes from "./routes/assetManager.routes";
+import deptHeadRoutes from "./routes/deptHead.routes";
+import employeeRoutes from "./routes/employee.routes";
 import errorMiddleware from "./middlewares/error.middleware";
 
 const app = express();
@@ -10,15 +11,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Register authentication routes
-app.use("/api/auth", authRoutes);
-
-app.get("/", (req, res) => {
-    res.send("AssetFlow Backend Running 🚀");
+app.get("/", (_req, res) => {
+  res.json({ status: "AssetFlow Backend Running 🚀" });
 });
 
-app.use("/api/assets", assetRoutes);
-app.use("/api/maintenance", maintenanceRoutes);
+// Authentication (public + employee management)
+app.use("/api/auth", authRoutes);
+
+// Role-specific routes
+app.use("/api/asset-manager", assetManagerRoutes);
+app.use("/api/dept-head", deptHeadRoutes);
+app.use("/api/employee", employeeRoutes);
+
 app.use(errorMiddleware);
 
 export default app;

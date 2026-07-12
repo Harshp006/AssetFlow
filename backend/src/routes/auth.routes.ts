@@ -1,14 +1,28 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/auth.controller';
-import { registerValidator, loginValidator } from '../validators/auth.validator';
-import validationMiddleware from '../middlewares/validation.middleware';
+import {
+  registerAdminHandler,
+  loginHandler,
+  getMeHandler,
+  createEmployeeHandler,
+  listEmployeesHandler,
+  updateRoleHandler,
+  toggleActiveHandler,
+} from '../controllers/auth.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Route for user registration
-router.post('/register', registerValidator, validationMiddleware, register);
+// Public routes
+router.post('/register/admin', registerAdminHandler);
+router.post('/login', loginHandler);
 
-// Route for user login
-router.post('/login', loginValidator, validationMiddleware, login);
+// Protected routes (requires valid JWT)
+router.get('/me', authMiddleware, getMeHandler);
+
+// Admin-only employee management
+router.get('/employees', authMiddleware, listEmployeesHandler);
+router.post('/employees', authMiddleware, createEmployeeHandler);
+router.patch('/employees/:id/role', authMiddleware, updateRoleHandler);
+router.patch('/employees/:id/toggle-active', authMiddleware, toggleActiveHandler);
 
 export default router;
