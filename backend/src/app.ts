@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import authRoutes from "./routes/auth.routes";
 
 import assetRoutes from "./routes/asset.routes";
 import errorMiddleware from "./middlewares/error.middleware";
@@ -8,6 +9,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Register authentication routes
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
     res.send("AssetFlow Backend Running 🚀");

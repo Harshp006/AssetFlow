@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+
 import { generateToken } from '../utils/jwt';
 
 // Define the interface representing the User structure stored in the database.
